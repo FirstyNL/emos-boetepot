@@ -1,194 +1,166 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/app/providers";
-import type { Profile, FineType } from "@/lib/types";
+import type { FineType, Profile } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
-export default function AddFineModal({
-  players,
-  fineTypes,
-  onCreated,
-}: {
+interface AddFineModalProps {
   players: Profile[];
   fineTypes: FineType[];
   onCreated: () => void;
-}) {
-  const { profile } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [playerId, setPlayerId] = useState("");
-  const [fineTypeId, setFineTypeId] = useState("");
-  const [customDescription, setCustomDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+}
 
-  function resetForm() {
-    setPlayerId("");
-    setFineTypeId("");
-    setCustomDescription("");
-    setAmount("");
-    setError(null);
-  }
+export default function AddFineModal({ players, fineTypes, onCreated }: AddFineModalProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [customReason, setCustomReason] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleFineTypeChange(id: string) {
-    setFineTypeId(id);
-    const ft = fineTypes.find((f) => f.id === id);
-    if (ft) {
-      setCustomDescription(ft.label);
-      setAmount(String(ft.default_amount));
-    }
-  }
+  const activeFineType = fineTypes.find((t) => t.id === selectedType);
+  const amountToCharge = activeFineType ? activeFineType.amount : Number(customAmount) || 0;
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!profile) return;
-    setError(null);
+    if (!selectedPlayer || (!selectedType && !customReason)) return;
 
-    const parsedAmount = parseFloat(amount.replace(",", "."));
-    if (!playerId || !customDescription || !parsedAmount || parsedAmount <= 0) {
-      setError("Vul een speler, omschrijving en geldig bedrag in.");
-      return;
-    }
-
-    setSaving(true);
-    const { error: insertError } = await supabase.from("fines").insert({
-      player_id: playerId,
-      fine_type_id: fineTypeId || null,
-      description: customDescription,
-      amount: parsedAmount,
-      created_by: profile.id,
+    setLoading(true);
+    const { error } = await supabase.from("fines").insert({
+      player_id: selectedPlayer,
+      fine_type_id: selectedType || null,
+      amount: amountToCharge,
+      reason: activeFineType ? activeFineType.name : customReason,
+      paid: false,
     });
-    setSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
-      return;
+    setLoading(false);
+    if (!error) {
+      setIsOpen(false);
+      setSelectedPlayer("");
+      setSelectedType("");
+      setCustomReason("");
+      setCustomAmount("");
+      onCreated();
+    } else {
+      alert("Fout tijdens het uitdelen, lekker handig weer.");
     }
-
-    resetForm();
-    setOpen(false);
-    onCreated();
   }
-
-  if (!profile?.is_admin) return null;
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-30 flex items-center gap-2 bg-emos hover:bg-emos-dark text-white font-semibold rounded-2xl shadow-lg shadow-emos/25 pl-4 pr-5 py-3.5 transition-transform active:scale-95"
-      >
-        <Plus size={18} />
-        Boete uitdelen
-      </button>
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="bg-emos hover:bg-emos-dark text-white font-black p-4 rounded-2xl shadow-xl flex items-center gap-2 transition"
+        >
+          <Plus size={20} />
+          <span className="text-xs uppercase tracking-wider hidden sm:inline">Boete uitdelen</span>
+        </button>
+      </div>
 
-      {open && (
-        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center">
-          <div
-            className="absolute inset-0 bg-slate-900/40"
-            onClick={() => setOpen(false)}
-          />
-          <form
-            onSubmit={handleSubmit}
-            className="relative bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl shadow-card p-5 space-y-4 animate-pop-in"
-          >
+      {isOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-xl text-slate-900 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">
-                Boete uitdelen
-              </h3>
+              <div>
+                <h2 className="text-lg font-black tracking-tight">Koekenbakker natellen 👮‍♂️</h2>
+                <p className="text-xs text-slate-500">Naai een teamgenoot na voor een overtreding.</p>
+              </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                onClick={() => setIsOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">
-                Speler
-              </label>
-              <select
-                required
-                value={playerId}
-                onChange={(e) => setPlayerId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emos/30 focus:border-emos"
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Wie is de dader?
+                </label>
+                <select
+                  required
+                  value={selectedPlayer}
+                  onChange={(e) => setSelectedPlayer(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-emos"
+                >
+                  <option value="">Kies de zondaar...</option>
+                  {players.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nickname ? `${p.full_name} (${p.nickname})` : p.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Wat heeft ie nu weer geflikt?
+                </label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => {
+                    setSelectedType(e.target.value);
+                    if (e.target.value) {
+                      setCustomReason("");
+                      setCustomAmount("");
+                    }
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-emos"
+                >
+                  <option value="">Kies een standaard geintje...</option>
+                  {fineTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({formatCurrency(t.amount)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {!selectedType && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Eigen reden
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Bijv. Te laat door een kater"
+                      value={customReason}
+                      onChange={(e) => setCustomReason(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-emos"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Bedrag (€)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="10"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-emos"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emos hover:bg-emos-dark text-white font-black py-3.5 rounded-2xl transition shadow-lg text-xs uppercase tracking-wider mt-2 flex items-center justify-center"
               >
-                <option value="">Kies een speler...</option>
-                {players.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">
-                Soort boete
-              </label>
-              <select
-                value={fineTypeId}
-                onChange={(e) => handleFineTypeChange(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emos/30 focus:border-emos"
-              >
-                <option value="">Aangepast...</option>
-                {fineTypes.map((ft) => (
-                  <option key={ft.id} value={ft.id}>
-                    {ft.emoji} {ft.label} ({formatCurrency(ft.default_amount)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">
-                Omschrijving
-              </label>
-              <input
-                type="text"
-                required
-                value={customDescription}
-                onChange={(e) => setCustomDescription(e.target.value)}
-                placeholder="Te laat op training"
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emos/30 focus:border-emos"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">
-                Bedrag
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="2,50"
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emos/30 focus:border-emos"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-emos bg-emos-light rounded-xl px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 bg-emos hover:bg-emos-dark text-white font-semibold rounded-xl py-2.5 text-sm transition-colors disabled:opacity-60"
-            >
-              {saving && <Loader2 size={16} className="animate-spin" />}
-              Boete toevoegen
-            </button>
-          </form>
+                {loading ? <Loader2 className="animate-spin" size={16} /> : "Boete direct opleggen 🔨"}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </>

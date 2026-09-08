@@ -1,106 +1,121 @@
 "use client";
 
-import { Trophy, CheckCircle2 } from "lucide-react";
+import { Trophy } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/types";
-import { formatCurrency, firstName } from "@/lib/utils";
-import Avatar from "@/components/Avatar";
+import { formatCurrency } from "@/lib/utils";
 
-const RANK_STYLE = [
-  {
-    ring: "ring-2 ring-emos",
-    badgeBg: "bg-emos",
-    badgeText: "text-white",
-    labels: [
-      "Grootste Loser van de Week 👑",
-      "Sponsor van de Club 💸",
-      "Koop gewoon een wekker...",
-    ],
-  },
-  {
-    ring: "ring-1 ring-slate-200",
-    badgeBg: "bg-slate-800",
-    badgeText: "text-white",
-    labels: ["Rookie van de week", "Verdiende zilver 🥈"],
-  },
-  {
-    ring: "ring-1 ring-slate-200",
-    badgeBg: "bg-amber-600",
-    badgeText: "text-white",
-    labels: ["Bijna op het schavot", "Net ontsnapt"],
-  },
-];
-
-function pickLabel(labels: string[], seed: number) {
-  return labels[seed % labels.length];
+interface WeekPodiumProps {
+  entries: LeaderboardEntry[];
 }
 
-export default function WeekPodium({
-  entries,
-}: {
-  entries: LeaderboardEntry[];
-}) {
+export default function WeekPodium({ entries }: WeekPodiumProps) {
   const top3 = entries.slice(0, 3);
 
+  if (top3.length === 0 || top3.every((e) => e.total === 0)) {
+    return (
+      <section className="bg-white text-slate-900 rounded-xl shadow-sm border border-slate-200 p-5 mb-5">
+        <div className="flex items-center gap-3 mb-3">
+          {/* Strak icoon met kleine hoeken (rounded-lg) */}
+          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-amber-500 shadow-sm">
+            <Trophy size={18} />
+          </div>
+          <h2 className="text-sm font-black text-slate-900 tracking-tight">Week-podium zondaars</h2>
+        </div>
+        <p className="text-xs text-slate-500 text-center py-4">
+          Nog geen boetes deze week. Iedereen houdt zich in of is gewoon te laf. 🍻
+        </p>
+      </section>
+    );
+  }
+
+  const podiumStyles = [
+    {
+      badge: "🥇 Goud",
+      border: "border-amber-200 bg-amber-50/40",
+      avatarRing: "ring-2 ring-amber-400",
+      bgBadge: "bg-amber-100 text-amber-800",
+    },
+    {
+      badge: "🥈 Zilver",
+      border: "border-slate-200 bg-slate-50",
+      avatarRing: "ring-2 ring-slate-300",
+      bgBadge: "bg-slate-200 text-slate-700",
+    },
+    {
+      badge: "🥉 Brons",
+      border: "border-amber-900/10 bg-amber-950/[0.02]",
+      avatarRing: "ring-2 ring-amber-700/40",
+      bgBadge: "bg-amber-900/10 text-amber-900",
+    },
+  ];
+
   return (
-    <section className="mb-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Trophy size={16} className="text-emos" />
-        <h2 className="text-sm font-bold text-slate-900">
-          Week-podium — Top boetepakkers
-        </h2>
+    <section className="bg-white text-slate-900 rounded-xl shadow-sm border border-slate-200 p-5 mb-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* Strak icoon met kleine hoeken (rounded-lg) */}
+          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-amber-500 shadow-sm">
+            <Trophy size={18} />
+          </div>
+          <h2 className="text-sm font-black text-slate-900 tracking-tight">Week-podium zondaars</h2>
+        </div>
+        <span className="text-xs font-semibold text-slate-400">Deze week</span>
       </div>
 
-      {top3.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 text-center text-sm text-slate-400">
-          Deze week nog geen boetes. Verdacht rustig eigenlijk. 🤨
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {top3.map((entry, i) => {
-            const style = RANK_STYLE[i];
-            const label =
-              entry.total === 0
-                ? null
-                : pickLabel(style.labels, entry.player.id.length + i);
-            return (
-              <div
-                key={entry.player.id}
-                className={`bg-white rounded-2xl shadow-sm border border-slate-100 p-4 ${style.ring}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar profile={entry.player} size="md" />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {firstName(entry.player.full_name)}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {entry.count} boete{entry.count === 1 ? "" : "s"}
-                      </p>
+      <div className="grid grid-cols-1 gap-2.5">
+        {top3.map((entry, index) => {
+          const style = podiumStyles[index];
+          const name = entry.player.nickname
+            ? `${entry.player.full_name} (${entry.player.nickname})`
+            : entry.player.full_name;
+
+          return (
+            <div
+              key={entry.player.id}
+              className={`flex items-center justify-between p-3.5 rounded-lg border ${style.border} transition-all`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  {entry.player.avatar_url ? (
+                    <img
+                      src={entry.player.avatar_url}
+                      alt={name}
+                      className={`w-10 h-10 rounded-lg object-cover ${style.avatarRing}`}
+                    />
+                  ) : (
+                    <div
+                      className={`w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs ${style.avatarRing}`}
+                    >
+                      {name.charAt(0)}
                     </div>
-                  </div>
-                  <span className="text-sm font-extrabold text-slate-900">
-                    {formatCurrency(entry.total)}
+                  )}
+                  <span className="absolute -bottom-1 -right-1 text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-white text-slate-900 shadow-sm border border-slate-200">
+                    {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
                   </span>
                 </div>
 
-                {entry.total === 0 ? (
-                  <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg px-2.5 py-1.5 w-fit">
-                    <CheckCircle2 size={13} />
-                    Liefste jongetje van de klas 😇
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-slate-900">{name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${style.bgBadge}`}>
+                      {style.badge}
+                    </span>
                   </div>
-                ) : (
-                  <div
-                    className={`${style.badgeBg} ${style.badgeText} text-xs font-semibold rounded-lg px-2.5 py-1.5 w-fit`}
-                  >
-                    {label}
-                  </div>
-                )}
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {entry.count} {entry.count === 1 ? "boete" : "boetes"} deze week. Lekker bezig kneus.
+                  </p>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              <div className="text-right">
+                <span className="text-sm font-black text-slate-900">
+                  {formatCurrency(entry.total)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

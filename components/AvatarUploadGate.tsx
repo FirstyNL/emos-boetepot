@@ -1,95 +1,80 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Camera, Upload, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/app/providers";
-import { uploadAvatar } from "@/lib/avatar";
-import Logo from "@/components/Logo";
 
 export default function AvatarUploadGate() {
-  const { profile, refreshProfile } = useAuth();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { profile } = useAuth();
+  const [uploading, setUploading] = useState(false);
 
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
-    setFile(selected);
-    setPreview(URL.createObjectURL(selected));
-    setError(null);
-  }
-
-  async function handleSave() {
-    if (!file || !profile) return;
-    setSaving(true);
-    setError(null);
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     try {
-      await uploadAvatar(profile.id, file);
-      await refreshProfile();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Uploaden mislukt.");
-      setSaving(false);
+      setUploading(true);
+      if (!e.target.files || e.target.files.length === 0 || !profile) return;
+      const file = e.target.files[0];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", profile.id);
+
+      if (updateError) throw updateError;
+      window.location.reload();
+    } catch (error) {
+      alert("Misgegaan met uploaden, probeer opnieuw lul.");
+    } finally {
+      setUploading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-card border border-slate-100 p-6 text-center animate-pop-in">
-        <div className="flex justify-center mb-3">
-          <Logo size={44} />
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-2xl text-white">
+        <div className="w-16 h-16 bg-emos/20 text-emos rounded-2xl mx-auto flex items-center justify-center">
+          <Camera size={32} />
         </div>
-        <h2 className="text-lg font-extrabold text-slate-900">
-          Bijna klaar, {profile?.full_name.split(" ")[0]}!
-        </h2>
-        <p className="text-sm text-slate-500 mt-1 mb-5">
-          Upload een profielfoto zodat je teamgenoten weten wie ze beboeten.
-        </p>
-
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="mx-auto flex flex-col items-center justify-center gap-1 w-28 h-28 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 hover:border-emos hover:bg-emos-light/40 transition-colors overflow-hidden mb-5"
-        >
-          {preview ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={preview}
-              alt="Voorbeeld"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <>
-              <Camera size={22} className="text-slate-400" />
-              <span className="text-xs text-slate-400 font-medium">
-                Kies foto
-              </span>
-            </>
-          )}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        {error && (
-          <p className="text-sm text-emos bg-emos-light rounded-xl px-3 py-2 mb-4">
-            {error}
+        <div className="space-y-2">
+          <h2 className="text-xl font-black tracking-tight">Kop d'r bij! 📸</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Geen smoesjes over privacy. Je moet eerst even een duidelijke smoelenboek-foto uploaden voordat je de app in mag. Zo weet iedereen wie er weer heeft zitten klooien.
           </p>
-        )}
+        </div>
 
-        <button
-          onClick={handleSave}
-          disabled={!file || saving}
-          className="w-full flex items-center justify-center gap-2 bg-emos hover:bg-emos-dark text-white font-semibold rounded-xl py-2.5 text-sm transition-colors disabled:opacity-50"
-        >
-          {saving && <Loader2 size={16} className="animate-spin" />}
-          Foto opslaan
-        </button>
+        <label className="block w-full cursor-pointer bg-emos hover:bg-emos-dark text-slate-950 font-black py-3.5 px-4 rounded-2xl transition shadow-lg text-center text-sm">
+          {uploading ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="animate-spin" size={18} />
+              Bezig met uploaden...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <Upload size={18} />
+              Kies jouw lelijke snufferd
+            </span>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            className="hidden"
+          />
+        </label>
       </div>
     </div>
   );

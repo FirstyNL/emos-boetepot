@@ -1,150 +1,185 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "./providers";
-import type { Fine, FineType, LeaderboardEntry, Profile } from "@/lib/types";
-import { startOfWeek } from "@/lib/utils";
-import { fireWelcomeConfetti } from "@/lib/confetti";
+import { useAuth } from "@/app/providers";
 import Header from "@/components/Header";
-import TeamOutingProgress from "@/components/TeamOutingProgress";
-import WeekPodium from "@/components/WeekPodium";
 import StatsCards from "@/components/StatsCards";
-import LiveFeed from "@/components/LiveFeed";
+import WeekPodium from "@/components/WeekPodium";
+import TeamOutingProgress from "@/components/TeamOutingProgress";
 import AddFineModal from "@/components/AddFineModal";
-import AvatarUploadGate from "@/components/AvatarUploadGate";
+import OnboardingGuide from "@/components/OnboardingGuide";
+import { CheckCircle2, Clock } from "lucide-react";
+import type { Fine, FineType, Profile, LeaderboardEntry } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { session, profile, loading: authLoading } = useAuth();
-
-  const [players, setPlayers] = useState<Profile[]>([]);
-  const [fineTypes, setFineTypes] = useState<FineType[]>([]);
+  const { profile } = useAuth();
   const [fines, setFines] = useState<Fine[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [fineTypes, setFineTypes] = useState<FineType[]>([]);
+  const [players, setPlayers] = useState<Profile[]>();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"all" | "open" | "paid">("all");
 
-  const loadData = useCallback(async () => {
-    const [{ data: playersData }, { data: fineTypesData }, { data: finesData }] =
-      await Promise.all([
-        supabase.from("profiles").select("*").order("full_name"),
-        supabase.from("fine_types").select("*").order("sort_order"),
-        supabase
-          .from("fines")
-          .select("*, profiles:player_id(*), fine_types(*)")
-          .order("created_at", { ascending: false })
-          .limit(50),
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [finesRes, typesRes, playersRes] = await Promise.all([
+        supabase.from("fines").select("*, profiles(*), fine_types(*)").order("created_at", { ascending: false }),
+        supabase.from("fine_types").select("*"),
+        supabase.from("profiles").select("*"),
       ]);
 
-    setPlayers((playersData as Profile[]) || []);
-    setFineTypes((fineTypesData as FineType[]) || []);
-    setFines((finesData as unknown as Fine[]) || []);
-    setDataLoading(false);
+      if (finesRes.data) setFines(finesRes.data as Fine[]);
+      if (typesRes.data) setFineTypes(typesRes.data as FineType[]);
+      if (playersRes.data) setPlayers(playersRes.data as Profile[]);
+    } catch (err) {
+      console.error("Fout bij laden dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  useEffect(() => {
-    if (!authLoading && !session) {
-      router.push("/login");
-    }
-  }, [authLoading, session, router]);
+  if (!profile) return null;
 
-  useEffect(() => {
-    if (!session) return;
-    if (sessionStorage.getItem("emos_just_logged_in")) {
-      sessionStorage.removeItem("emos_just_logged_in");
-      fireWelcomeConfetti();
-    }
-  }, [session]);
+  const totalPot = fines.filter((f) => f.paid).reduce((acc, f) => acc + Number(f.amount), 0);
+  const myBalance = fines
+    .filter((f) => f.player_id === profile.id && !f.paid)
+    .reduce((acc, f) => acc + Number(f.amount), 0);
 
-  useEffect(() => {
-    if (!session) return;
-    loadData();
+  const filteredFines = fines.filter((f) => {
+    if (activeTab === "open") return !f.paid;
+    if (activeTab === "paid") return f.paid;
+    return true;
+  });
 
-    const channel = supabase
-      .channel("fines-live")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "fines" },
-        () => loadData()
-      )
-      .subscribe();
+  const playerTotals = new Map<string, { total: number; count: number; player: Profile }>();
+  fines.forEach((f) => {
+    if (!f.profiles) return;
+    const current = playerTotals.get(f.player_id) || { total: 0, count: 0, player: f.profiles };
+    playerTotals.set(f.player_id, {
+      total: current.total + Number(f.amount),
+      count: current.count + 1,
+      player: f.profiles,
+    });
+  });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session, loadData]);
-
-  const weekLeaderboard = useMemo<LeaderboardEntry[]>(() => {
-    const weekStart = startOfWeek();
-    const totals = new Map<string, { total: number; count: number }>();
-
-    for (const fine of fines) {
-      if (new Date(fine.created_at) < weekStart) continue;
-      const current = totals.get(fine.player_id) || { total: 0, count: 0 };
-      current.total += fine.amount;
-      current.count += 1;
-      totals.set(fine.player_id, current);
-    }
-
-    return players
-      .map((player) => ({
-        player,
-        total: totals.get(player.id)?.total || 0,
-        count: totals.get(player.id)?.count || 0,
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [fines, players]);
-
-  const totalPot = useMemo(
-    () => fines.reduce((sum, f) => sum + f.amount, 0),
-    [fines]
+  const leaderboardEntries: LeaderboardEntry[] = Array.from(playerTotals.values()).sort(
+    (a, b) => b.total - a.total
   );
-  const raisedForOuting = useMemo(
-    () => fines.filter((f) => f.paid).reduce((sum, f) => sum + f.amount, 0),
-    [fines]
-  );
-  const myBalance = useMemo(
-    () =>
-      fines
-        .filter((f) => f.player_id === profile?.id && !f.paid)
-        .reduce((sum, f) => sum + f.amount, 0),
-    [fines, profile]
-  );
-
-  async function markPaid(fineId: string) {
-    await supabase
-      .from("fines")
-      .update({ paid: true, paid_at: new Date().toISOString() })
-      .eq("id", fineId);
-    loadData();
-  }
-
-  if (authLoading || !session || !profile || dataLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-emos" size={28} />
-      </div>
-    );
-  }
 
   return (
-    <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 pb-28">
-      {!profile.avatar_url && <AvatarUploadGate />}
-      <Header />
-      <TeamOutingProgress raised={raisedForOuting} />
-      <WeekPodium entries={weekLeaderboard} />
-      <StatsCards totalPot={totalPot} myBalance={myBalance} />
-      <LiveFeed
-        fines={fines}
-        isAdmin={!!profile.is_admin}
-        onMarkPaid={markPaid}
-      />
-      <AddFineModal
-        players={players}
-        fineTypes={fineTypes}
-        onCreated={loadData}
-      />
+    <main className="min-h-screen bg-slate-50 text-slate-900 pb-24">
+      {profile && profile.has_seen_guide === false && (
+        <OnboardingGuide onComplete={loadData} />
+      )}
+
+      <div className="max-w-xl mx-auto p-4 sm:p-6 space-y-4">
+        {/* Header */}
+        <Header />
+
+        {/* 1. Doel teamuitje bovenaan */}
+        <TeamOutingProgress raised={totalPot} fines={fines} players={players} />
+
+        {/* 2. Week-podium direct daaronder */}
+        <WeekPodium entries={leaderboardEntries} />
+
+        {/* 3. Schatkist & Schuld naast elkaar */}
+        <StatsCards totalPot={totalPot} myBalance={myBalance} />
+
+        {/* 4. De doofpot & boetes */}
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-black text-slate-900 tracking-tight">De doofpot & boetes</h2>
+              <p className="text-xs text-slate-500">Overzicht van alle wandaden en betalingen.</p>
+            </div>
+            
+            {/* Tabs filter */}
+            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  activeTab === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                Alles
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("open")}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  activeTab === "open" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                Open
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("paid")}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  activeTab === "paid" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                Betaald
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8 text-xs text-slate-400">Boetes aan het ophalen...</div>
+          ) : filteredFines.length === 0 ? (
+            <div className="text-center py-8 text-xs text-slate-400">Geen boetes gevonden in deze categorie.</div>
+          ) : (
+            <div className="space-y-2.5">
+              {filteredFines.map((fine) => {
+                const playerName = fine.profiles?.nickname
+                  ? `${fine.profiles.full_name} (${fine.profiles.nickname})`
+                  : fine.profiles?.full_name || "Onbekend";
+
+                return (
+                  <div
+                    key={fine.id}
+                    className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900">{playerName}</span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-bold flex items-center gap-1 ${
+                            fine.paid
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-red-50 text-red-700 border border-red-200"
+                          }`}
+                        >
+                          {fine.paid ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                          {fine.paid ? "Betaald" : "Openstaand"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">{fine.reason}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-900">
+                        {formatCurrency(fine.amount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {players && fineTypes && (
+        <AddFineModal players={players} fineTypes={fineTypes} onCreated={loadData} />
+      )}
     </main>
   );
 }

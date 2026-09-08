@@ -1,55 +1,55 @@
 "use client";
 
-import { Wallet, Landmark, Send } from "lucide-react";
+import { Wallet, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
-const TIKKIE_URL = process.env.NEXT_PUBLIC_TIKKIE_URL;
-
-export default function StatsCards({
-  totalPot,
-  myBalance,
-}: {
+interface StatsCardsProps {
   totalPot: number;
   myBalance: number;
-}) {
-  function handleTikkie() {
-    if (TIKKIE_URL) {
-      window.open(TIKKIE_URL, "_blank", "noopener,noreferrer");
-    } else {
-      alert("Vraag de penningmeester om de Tikkie-link in te stellen.");
-    }
-  }
+}
 
+export default function StatsCards({ totalPot, myBalance }: StatsCardsProps) {
   return (
-    <section className="grid grid-cols-2 gap-3 mb-5">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
-        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center mb-2.5">
-          <Landmark size={15} className="text-slate-500" />
+    <div className="grid grid-cols-2 gap-3 mb-6">
+      {/* Totaal in de pot */}
+      <div className="bg-white text-slate-900 rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-emos shadow-sm">
+            <Wallet size={18} />
+          </div>
+          <h3 className="text-sm font-black text-slate-900 tracking-tight">De schatkist</h3>
         </div>
-        <p className="text-xs text-slate-400 mb-0.5">Totaal in de pot</p>
-        <p className="text-lg font-extrabold text-slate-900">
-          {formatCurrency(totalPot)}
-        </p>
+        <div>
+          <h4 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            {formatCurrency(totalPot)}
+          </h4>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {totalPot === 0 ? "Nog lege boel, tering hé" : "Lekker cashen voor de bierboot 🍻"}
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
-        <div className="w-8 h-8 rounded-xl bg-emos-light flex items-center justify-center mb-2.5">
-          <Wallet size={15} className="text-emos" />
+      {/* Openstaand saldo */}
+      <div className={`rounded-xl p-5 shadow-sm border flex flex-col justify-between ${
+        myBalance > 0 
+          ? "bg-red-50/40 border-red-200 text-slate-900" 
+          : "bg-white border-slate-200 text-slate-900"
+      }`}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shadow-sm ${myBalance > 0 ? "bg-red-50 border-red-200 text-red-600" : "bg-slate-50 border-slate-200 text-emerald-600"}`}>
+            <AlertCircle size={18} />
+          </div>
+          <h3 className="text-sm font-black text-slate-900 tracking-tight">Jouw schuld</h3>
         </div>
-        <p className="text-xs text-slate-400 mb-0.5">Jouw openstaand saldo</p>
-        <p className="text-lg font-extrabold text-slate-900 mb-2.5">
-          {formatCurrency(myBalance)}
-        </p>
-        {myBalance > 0 && (
-          <button
-            onClick={handleTikkie}
-            className="w-full flex items-center justify-center gap-1.5 bg-emos hover:bg-emos-dark text-white text-xs font-semibold rounded-lg py-2 transition-colors"
-          >
-            <Send size={12} />
-            Betaal via Tikkie
-          </button>
-        )}
+        <div>
+          <h4 className={`text-xl sm:text-2xl font-black tracking-tight ${myBalance > 0 ? "text-red-600" : "text-emerald-600"}`}>
+            {formatCurrency(myBalance)}
+          </h4>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {myBalance > 0 ? "Betalen droeftoeter, voor ze je tanden tellen 👊" : "Netjes, je staat op 0 lul"}
+          </p>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }

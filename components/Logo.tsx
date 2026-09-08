@@ -1,6 +1,10 @@
 import React from 'react';
 
-export default function Logo() {
+interface LogoProps {
+  size?: number; // Maak de size prop optioneel
+}
+
+export default function Logo({ size = 32 }: LogoProps) {
   return (
     <div className="flex items-center group cursor-pointer">
       {/* Grotere container */}
@@ -8,8 +12,8 @@ export default function Logo() {
         
         {/* Icoon: Groot formaat met fijne, strakke lijntjes */}
         <svg 
-          width="32" 
-          height="32" 
+          width={size} 
+          height={size} 
           viewBox="0 0 24 24" 
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"

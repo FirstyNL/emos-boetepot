@@ -31,21 +31,21 @@ export default function WeekPodium({ entries }: WeekPodiumProps) {
   const podiumStyles = [
     {
       badge: "🥇 Goud",
-      border: "border-amber-200 bg-amber-50/40",
+      border: "border-amber-300 bg-amber-50",
+      avatarRing: "ring-2 ring-amber-500",
+      bgBadge: "bg-amber-500 text-white",
+    },
+    {
+      badge: "🥈 Zilver",
+      border: "border-amber-200 bg-amber-50/60",
       avatarRing: "ring-2 ring-amber-400",
       bgBadge: "bg-amber-100 text-amber-800",
     },
     {
-      badge: "🥈 Zilver",
-      border: "border-slate-200 bg-slate-50",
-      avatarRing: "ring-2 ring-slate-300",
-      bgBadge: "bg-slate-200 text-slate-700",
-    },
-    {
       badge: "🥉 Brons",
-      border: "border-amber-900/10 bg-amber-950/[0.02]",
-      avatarRing: "ring-2 ring-amber-700/40",
-      bgBadge: "bg-amber-900/10 text-amber-900",
+      border: "border-orange-200 bg-orange-50/50",
+      avatarRing: "ring-2 ring-orange-400",
+      bgBadge: "bg-orange-100 text-orange-800",
     },
   ];
 

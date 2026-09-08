@@ -50,7 +50,7 @@ export default function TeamOutingProgress({
     <section className="bg-white text-slate-900 rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-emos shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm">
             <PartyPopper size={18} />
           </div>
           <div>
@@ -59,13 +59,13 @@ export default function TeamOutingProgress({
           </div>
         </div>
         <div className="text-right">
-          <span className="text-base font-black text-emos">{percentage}%</span>
+          <span className="text-base font-black text-emerald-600">{percentage}%</span>
         </div>
       </div>
 
       <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
         <div
-          className="h-full bg-emos rounded-full transition-all duration-700 ease-out relative"
+          className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out relative"
           style={{ width: `${percentage}%` }}
         >
           <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />

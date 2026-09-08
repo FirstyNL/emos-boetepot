@@ -11,7 +11,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "EMOS Boetepot",
-  description: "De boetepot van RKSV EMOS. Betaal, of wees de lachertje van de week.",
+  description: "De officiële boetepot van EMOS",
 };
 
 export default function RootLayout({

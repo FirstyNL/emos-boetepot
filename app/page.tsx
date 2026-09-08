@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/app/providers";
 import Header from "@/components/Header";
@@ -9,12 +11,13 @@ import WeekPodium from "@/components/WeekPodium";
 import TeamOutingProgress from "@/components/TeamOutingProgress";
 import AddFineModal from "@/components/AddFineModal";
 import OnboardingGuide from "@/components/OnboardingGuide";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, Receipt } from "lucide-react";
 import type { Fine, FineType, Profile, LeaderboardEntry } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { profile } = useAuth();
+  const router = useRouter();
+  const { session, profile, loading: authLoading } = useAuth();
   const [fines, setFines] = useState<Fine[]>([]);
   const [fineTypes, setFineTypes] = useState<FineType[]>([]);
   const [players, setPlayers] = useState<Profile[]>();
@@ -41,10 +44,22 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading && !session) {
+      router.push("/login");
+    }
+  }, [authLoading, session, router]);
 
-  if (!profile) return null;
+  useEffect(() => {
+    if (session) loadData();
+  }, [session]);
+
+  if (authLoading || !session || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-emos" size={28} />
+      </div>
+    );
+  }
 
   const totalPot = fines.filter((f) => f.paid).reduce((acc, f) => acc + Number(f.amount), 0);
   const myBalance = fines
@@ -78,7 +93,7 @@ export default function DashboardPage() {
         <OnboardingGuide onComplete={loadData} />
       )}
 
-      <div className="max-w-xl mx-auto p-4 sm:p-6 space-y-4">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-4">
         {/* Header */}
         <Header />
 
@@ -94,11 +109,16 @@ export default function DashboardPage() {
         {/* 4. De doofpot & boetes */}
         <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-black text-slate-900 tracking-tight">De doofpot & boetes</h2>
-              <p className="text-xs text-slate-500">Overzicht van alle wandaden en betalingen.</p>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-sky-600 shadow-sm">
+                <Receipt size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-900 tracking-tight">De doofpot & boetes</h2>
+                <p className="text-xs text-slate-500">Overzicht van alle wandaden en betalingen.</p>
+              </div>
             </div>
-            
+
             {/* Tabs filter */}
             <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 self-start sm:self-auto">
               <button

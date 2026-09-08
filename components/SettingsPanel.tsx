@@ -98,6 +98,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       setFile(null);
       setPreview(null);
       setSaved(true);
+      setTimeout(onClose, 700);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Opslaan mislukt.");
     } finally {
@@ -141,11 +142,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         {/* Avatar Upload met duidelijke actie-indicatie */}
         <div className="flex flex-col items-center py-1 space-y-2">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="relative group cursor-pointer"
-          >
+          <div>
             {preview ? (
               <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emos shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -156,16 +153,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
             ) : (
-              <div className="relative">
-                <Avatar profile={profile} size="lg" />
-              </div>
+              <Avatar profile={profile} size="lg" />
             )}
-            <div className="absolute inset-0 rounded-xl bg-slate-900/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera size={18} className="mb-0.5" />
-              <span className="text-[10px] font-bold">Wijzig</span>
-            </div>
-          </button>
-          
+          </div>
+
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -207,7 +198,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="Bijv. De Tank"
+            placeholder="Bijv. Sjaak (staat altijd buitenspel)"
             className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg px-3.5 py-3 text-xs focus:outline-none focus:border-emos transition"
           />
         </div>

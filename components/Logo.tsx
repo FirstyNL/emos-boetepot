@@ -8,7 +8,7 @@ export default function Logo({ size = 32 }: LogoProps) {
   return (
     <div className="flex items-center group cursor-pointer">
       {/* Grotere container */}
-      <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg shadow-red-600/20 transition-all group-hover:bg-red-700 group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-red-700/30 overflow-hidden">
+      <div className="relative flex h-14 w-14 items-center justify-center rounded-xl bg-red-600 text-white shadow-lg shadow-red-600/20 transition-all group-hover:bg-red-700 group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-red-700/30 overflow-hidden">
         
         {/* Icoon: Groot formaat met fijne, strakke lijntjes */}
         <svg 

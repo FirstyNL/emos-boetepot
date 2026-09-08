@@ -17,8 +17,12 @@ create table if not exists public.profiles (
 );
 
 -- Kolommen die na de eerste versie van dit schema zijn toegevoegd:
--- deze regel voegt ze alsnog toe als de tabel al bestond.
+-- deze regels voegen ze alsnog toe als de tabel al bestond.
 alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists nickname text;
+alter table public.profiles add column if not exists role text not null default 'Speler';
+alter table public.profiles add column if not exists notifications_enabled boolean not null default true;
+alter table public.profiles add column if not exists has_seen_guide boolean not null default false;
 
 alter table public.profiles enable row level security;
 
@@ -38,14 +42,22 @@ create policy "spelers mogen eigen profiel bewerken"
   with check (auth.uid() = id and is_admin = (select is_admin from public.profiles where id = auth.uid()));
 
 -- Nieuw account -> automatisch een profiel aanmaken.
+-- nickname en role komen mee uit de user_metadata die het registratieformulier
+-- meegeeft aan supabase.auth.signUp (options.data), zodat er geen aparte
+-- update-round-trip nodig is direct na registratie.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name)
-  values (new.id, coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)));
+  insert into public.profiles (id, full_name, nickname, role)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
+    nullif(new.raw_user_meta_data ->> 'nickname', ''),
+    coalesce(nullif(new.raw_user_meta_data ->> 'role', ''), 'Speler')
+  );
   return new;
 end;
 $$;

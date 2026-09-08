@@ -117,7 +117,7 @@ export default function AddFineModal({ players, fineTypes, onCreated }: AddFineM
                   <option value="">Kies een standaard geintje...</option>
                   {fineTypes.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} ({formatCurrency(t.amount)})
+                      {t.name ?? t.label} ({formatCurrency(t.amount ?? t.default_amount ?? 0)})
                     </option>
                   ))}
                 </select>

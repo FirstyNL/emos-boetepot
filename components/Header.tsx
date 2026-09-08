@@ -29,7 +29,7 @@ export default function Header() {
       <header className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {displayName}, {slogan}
+            {profile.full_name}, {slogan}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Welkom in het digitale slachtofferhok.
@@ -40,7 +40,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2.5 bg-white text-slate-900 p-1.5 sm:pr-3.5 rounded-xl hover:bg-slate-50 transition shadow-sm border border-slate-200"
+            className="flex items-center gap-2.5 bg-white text-slate-900 p-1.5 pr-3 sm:pr-3.5 rounded-xl hover:bg-slate-50 transition shadow-sm border border-slate-200"
           >
             {profile.avatar_url ? (
               <img
@@ -53,7 +53,7 @@ export default function Header() {
                 {displayName.charAt(0)}
               </div>
             )}
-            <User size={16} className="text-slate-500 hidden sm:block" />
+            <User size={16} className="text-slate-500" />
           </button>
 
           {dropdownOpen && (

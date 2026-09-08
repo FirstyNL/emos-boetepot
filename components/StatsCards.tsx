@@ -14,13 +14,13 @@ export default function StatsCards({ totalPot, myBalance }: StatsCardsProps) {
       {/* Totaal in de pot */}
       <div className="bg-white text-slate-900 rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-emos shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm">
             <Wallet size={18} />
           </div>
           <h3 className="text-sm font-black text-slate-900 tracking-tight">De schatkist</h3>
         </div>
         <div>
-          <h4 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          <h4 className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
             {formatCurrency(totalPot)}
           </h4>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -30,19 +30,15 @@ export default function StatsCards({ totalPot, myBalance }: StatsCardsProps) {
       </div>
 
       {/* Openstaand saldo */}
-      <div className={`rounded-xl p-5 shadow-sm border flex flex-col justify-between ${
-        myBalance > 0 
-          ? "bg-red-50/40 border-red-200 text-slate-900" 
-          : "bg-white border-slate-200 text-slate-900"
-      }`}>
+      <div className="bg-white text-slate-900 rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
         <div className="flex items-center gap-3 mb-3">
-          <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shadow-sm ${myBalance > 0 ? "bg-red-50 border-red-200 text-red-600" : "bg-slate-50 border-slate-200 text-emerald-600"}`}>
+          <div className="w-9 h-9 rounded-lg bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shadow-sm">
             <AlertCircle size={18} />
           </div>
           <h3 className="text-sm font-black text-slate-900 tracking-tight">Jouw schuld</h3>
         </div>
         <div>
-          <h4 className={`text-xl sm:text-2xl font-black tracking-tight ${myBalance > 0 ? "text-red-600" : "text-emerald-600"}`}>
+          <h4 className="text-xl sm:text-2xl font-black text-red-600 tracking-tight">
             {formatCurrency(myBalance)}
           </h4>
           <p className="text-xs text-slate-500 mt-0.5">
